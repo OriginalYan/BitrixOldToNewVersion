@@ -64,7 +64,11 @@ function SetOriginalData($mas_tables = array(), $preffix = 'import_', $dop_strin
     if (!empty($mas_tables) && $preffix != "" && $path_to_file != ""){
         if (filesize($path_to_file) != 0){
 
-            addToFileEnd($path_to_file, 'a+', PHP_EOL . $dop_string . PHP_EOL);
+            if ($dop_string != ""){
+                addToFileEnd($path_to_file, 'a+', PHP_EOL . $dop_string . PHP_EOL);
+            }
+
+            editColumnsParam();
 
             foreach ($mas_tables as $table){
                 $file_content =  file_get_contents($path_to_file);
@@ -79,7 +83,16 @@ function SetOriginalData($mas_tables = array(), $preffix = 'import_', $dop_strin
     }
 }
 
-function editColumnsParam($connect_to, $connect_from, $table_name){
+/**
+ * @param $connect_to
+ * @param $connect_from
+ * @param $table_name
+ * @param $prefix
+ * @return string
+ */
+function editColumnsParam($connect_to, $connect_from, $table_name, $prefix){
+    $result_edit = '';
+
     if (!empty($connect_to) &&  !empty($connect_from) && $table_name != ""){
 
         try {
@@ -98,26 +111,38 @@ function editColumnsParam($connect_to, $connect_from, $table_name){
             $mas_columns_from = $res_from->fetchAll();
             $mas_columns_to = $res_to->fetchAll();
 
-            debug($mas_columns_from);
-
             foreach ($mas_columns_to as $key => $columns_to) {
                 if ($columns_to['COLUMN_NAME'] != $mas_columns_from[$key]['COLUMN_NAME']){
 
-                    if (getTrueColumns($columns_to['COLUMN_NAME'], $mas_columns_from)){
+                    $str_query = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" . $table_name . "' AND COLUMNS.TABLE_SCHEMA = '" . $connect_to['DB_NAME'] . "' AND COLUMN_NAME = '" . $columns_to['COLUMN_NAME'] . "';";
+                    $getColumn = $db_to->query($str_query);
+                    $result = $getColumn->fetch();
 
-                    } else {
-                        //скрипт выбора недостающей колонки и добавление его в новую
+                    $column_before = $mas_columns_to[$key - 1]['COLUMN_NAME'];
+
+                    if (!getTrueColumns($columns_to['COLUMN_NAME'], $mas_columns_from)){
+                        $result_edit.= "ALTER TABLE " . $prefix . $table_name . " ADD " . $columns_to['COLUMN_NAME'] . getDefaultAndCollate($result) . " AFTER " .  $column_before . ";";
                     }
-                } else {
-                    echo 'Столбец из бд ' . $connect_from['DB_NAME'] . '.' . $mas_columns_from[$key]['COLUMN_NAME'] . ' совпадает, что и в таблице ' . $connect_to['DB_NAME'] . '.' . $table_name . "<br>";
+
+                    if (getTrueColumns($columns_to['COLUMN_NAME'], $mas_columns_from)){
+                        $result_edit.= "ALTER TABLE " . $prefix . $table_name . " MODIFY " . $columns_to['COLUMN_NAME'] . getDefaultAndCollate($result) . " AFTER " . $column_before . ";";
+                    }
                 }
             }
         } catch (PDOException $e) {
             exit('Ошибка подключения ' . $e->getMessage());
         }
     }
+    return $result_edit;
 }
 
+/**
+ * @param $str
+ * @param $mas
+ * @return bool
+ *
+ * ф-я определения колонок
+ */
 function getTrueColumns($str, $mas){
     foreach ($mas as $elemColumn) {
         if (in_array($str, $elemColumn)) return true;
@@ -125,6 +150,13 @@ function getTrueColumns($str, $mas){
     return false;
 }
 
+/**
+ * @param $path_to_file
+ * @param $mode
+ * @param $string
+ *
+ * ф-я записи в конец файла
+ */
 function addToFileEnd($path_to_file, $mode, $string){
     if ($path_to_file != "" && $mode != "" && $string != ""){
         $file_add_end = fopen($path_to_file, $mode);
@@ -133,6 +165,12 @@ function addToFileEnd($path_to_file, $mode, $string){
     }
 }
 
+/**
+ * @param $path_to_file
+ * @param $mode
+ * @param $string
+ * ф-я записи в начало файла
+ */
 function addToFileStart($path_to_file, $mode, $string){
     if ($path_to_file != "" && $mode != "" && $string != ""){
         $file_add_end = fopen($path_to_file, $mode);
@@ -141,10 +179,40 @@ function addToFileStart($path_to_file, $mode, $string){
     }
 }
 
+// функция для правильного определния дефолтногот поля
+/**
+ * @param $data
+ * @return string
+ */
+function getDefaultAndCollate($data){
+    $coll = '';
+    $wordData = '';
+
+    $coll = " " . $data['COLUMN_TYPE'];
+
+    if ($data['DATA_TYPE'] == 'varchar' ||
+        $data['DATA_TYPE'] == 'text' ||
+        $data['DATA_TYPE'] == 'mediumtext' ||
+        $data['DATA_TYPE'] == 'char' ||
+        $data['DATA_TYPE'] == 'mediumtext' ||
+        $data['DATA_TYPE'] == 'longtext' ||
+        $data['DATA_TYPE'] == 'longtext' ||
+        $data['DATA_TYPE'] == 'longtext' ||
+        $data['DATA_TYPE'] == 'longtext' ||
+        $data['DATA_TYPE'] == 'int') $wordData = "'" . $data['COLUMN_DEFAULT'] . "'";
+
+    if ($data['COLLATION_NAME'] != "") $coll.= ' COLLATE ' . $data['COLLATION_NAME'];
+    if ($data['COLUMN_DEFAULT'] != "") $coll.= ' DEFAULT ' . $wordData; else $coll.= ' DEFAULT';
+    if ($data['IS_NULLABLE'] == 'YES') $coll.= ' NULL'; else $coll.= ' NOT NULL';
+
+    return $coll;
+}
+
+/**
+ * @param $data
+ */
 function debug($data){
     echo "<pre>";
     print_r($data);
     echo "</pre>";
 }
-
-editColumnsParam($connect_to, $connect_from, 'b_tasks');
