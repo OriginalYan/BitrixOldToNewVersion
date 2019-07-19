@@ -1,23 +1,21 @@
 <?php
 
+require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix_perenos/connect.php';
+
 /**
  * @param array $tables
  * @param string $prefix
  * @return string
- *
  * Функция для создания копии боевых ьаблиц в новые без клюдчей, для
  * предотвращения возникновения ошибки первичных ключей
  */
-function createTableForImport($tables = array(), $prefix = 'import_'){
+function createTableForImport($tables = array(), $prefix = 'import_', $connect_from){
 
     if (!empty($tables) && $prefix != ""){
         //задаем данные для подключения откуда будет импорт
-        $dsn = 'mysql:host=bitrix-new.devinotest.local;port=3306;dbname=bitrix24prod;charset=utf8;';
-        $user = 'root';
-        $password = 'willbechanged';
 
         try {
-            $dbh = new PDO($dsn, $user, $password);
+            $dbh = new PDO($connect_from['DSN'], $connect_from['LOGIN'], $connect_from['PASS']);
             $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
             //проходим массив таблиц копии которых нам нужны
@@ -81,6 +79,52 @@ function SetOriginalData($mas_tables = array(), $preffix = 'import_', $dop_strin
     }
 }
 
+function editColumnsParam($connect_to, $connect_from, $table_name){
+    if (!empty($connect_to) &&  !empty($connect_from) && $table_name != ""){
+
+        try {
+            $db_from = new PDO($connect_from['DSN'], $connect_from['LOGIN'], $connect_from['PASS']);
+            $db_to = new PDO($connect_to['DSN'], $connect_to['LOGIN'], $connect_to['PASS']);
+
+            $db_from->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $db_to->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+            $query_bd_from = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" . $table_name . "' AND TABLE_SCHEMA = '" . $connect_from['DB_NAME'] . "';";
+            $query_bd_to = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" . $table_name . "' AND TABLE_SCHEMA = '" . $connect_to['DB_NAME'] . "';";
+
+            $res_from = $db_from->query($query_bd_from);
+            $res_to = $db_to->query($query_bd_to);
+
+            $mas_columns_from = $res_from->fetchAll();
+            $mas_columns_to = $res_to->fetchAll();
+
+            debug($mas_columns_from);
+
+            foreach ($mas_columns_to as $key => $columns_to) {
+                if ($columns_to['COLUMN_NAME'] != $mas_columns_from[$key]['COLUMN_NAME']){
+
+                    if (getTrueColumns($columns_to['COLUMN_NAME'], $mas_columns_from)){
+
+                    } else {
+                        //скрипт выбора недостающей колонки и добавление его в новую
+                    }
+                } else {
+                    echo 'Столбец из бд ' . $connect_from['DB_NAME'] . '.' . $mas_columns_from[$key]['COLUMN_NAME'] . ' совпадает, что и в таблице ' . $connect_to['DB_NAME'] . '.' . $table_name . "<br>";
+                }
+            }
+        } catch (PDOException $e) {
+            exit('Ошибка подключения ' . $e->getMessage());
+        }
+    }
+}
+
+function getTrueColumns($str, $mas){
+    foreach ($mas as $elemColumn) {
+        if (in_array($str, $elemColumn)) return true;
+    }
+    return false;
+}
+
 function addToFileEnd($path_to_file, $mode, $string){
     if ($path_to_file != "" && $mode != "" && $string != ""){
         $file_add_end = fopen($path_to_file, $mode);
@@ -102,3 +146,5 @@ function debug($data){
     print_r($data);
     echo "</pre>";
 }
+
+editColumnsParam($connect_to, $connect_from, 'b_tasks');

@@ -1,5 +1,7 @@
 <?php
 
+require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix_perenos/functions.php';
+
 $mas_tables = array(
     'b_task',
     'b_tasks',
@@ -34,3 +36,4 @@ $mas_tables = array(
     'b_tasks_viewed',
     'b_task_operation',
 );
+
