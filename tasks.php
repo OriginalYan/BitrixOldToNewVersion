@@ -1,6 +1,7 @@
 <?php
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix_perenos/functions.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix_perenos/connect.php';
 
 $mas_tables = array(
     'b_task',
@@ -36,4 +37,19 @@ $mas_tables = array(
     'b_tasks_viewed',
     'b_task_operation',
 );
+
+$path_to_file = $_SERVER['DOCUMENT_ROOT'] . '/bitrix_perenos/files_sql_add_more_command/import_tasks.sql';
+$path_to_file_sonet = $_SERVER['DOCUMENT_ROOT'] . '/bitrix_perenos/files_sql_add_more_command/sonet_group.sql';
+
+//createTableForImport($mas_tables, 'import_', $connect_from);
+//SetOriginalData($mas_tables, 'import_', '', $path_to_file, $connect_to, $connect_from);
+
+$mas_tab_uts = array(
+    'b_sonet_group',
+    'b_uts_sonet_group',
+    'b_sonet_group_subject'
+);
+
+//createTableForImport($mas_tab_uts, 'import_', $connect_from);
+//SetOriginalData($mas_tab_uts, 'import_', 'ALTER TABLE b_uts_sonet_group ADD UF_SORT double DEFAULT NULL AFTER UF_SG_DEPT', $path_to_file_sonet, $connect_to, $connect_from);
 

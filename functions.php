@@ -51,30 +51,35 @@ function createTableForImport($tables = array(), $prefix = 'import_', $connect_f
 
 
 /**
+ * после экспорта в файл копий созданных таблиц мы производим добавление строк с очисткой боевых таблиц в бд
+ * и вставка туда данных из импортированных таблиц
+ */
+
+/**
  * @param array $mas_tables
  * @param string $preffix
  * @param $dop_string
  * @param $path_to_file
- *
- * после экспорта в файл копий созданных таблиц мы производим добавление строк с очисткой боевых таблиц в бд
- * и вставка туда данных из импортированных таблиц
+ * @param $connect_to
+ * @param $connect_from
  */
-function SetOriginalData($mas_tables = array(), $preffix = 'import_', $dop_string, $path_to_file){
+function SetOriginalData($mas_tables = array(), $preffix = 'import_', $dop_string, $path_to_file, $connect_to, $connect_from){
 
-    if (!empty($mas_tables) && $preffix != "" && $path_to_file != ""){
+    if (!empty($mas_tables) && $preffix != "" && $path_to_file != "" && !empty($connect_to) && !empty($connect_from)){
         if (filesize($path_to_file) != 0){
 
             if ($dop_string != ""){
                 addToFileEnd($path_to_file, 'a+', PHP_EOL . $dop_string . PHP_EOL);
             }
 
-            editColumnsParam();
-
             foreach ($mas_tables as $table){
                 $file_content =  file_get_contents($path_to_file);
 
-                addToFileStart($path_to_file, 'w+', 'TRUNCATE ' . $table . ';' . PHP_EOL . $file_content);
-
+                //Записываем в начало sql код очистки для боевых таблиц
+                addToFileStart($path_to_file, 'w+', 'TRUNCATE ' . $table . ';' . PHP_EOL . 'DROP TABLE IF EXISTS ' . $preffix . $table . ';' . PHP_EOL . $file_content);
+                //Перед вставкой данных проверяем схожесть структуры столбцов, изменяем структуру временных таблиц в случае не схожести
+                addToFileEnd($path_to_file, 'a+', editColumnsParam($connect_to, $connect_from, $table, $preffix) . PHP_EOL);
+                //Записываем в конец данные из временных в боевые таблицы
                 addToFileEnd($path_to_file, 'a+', 'INSERT INTO ' . $table . ' SELECT * FROM ' . $preffix . $table . ';' . PHP_EOL);
             }
         } else {
@@ -95,6 +100,7 @@ function editColumnsParam($connect_to, $connect_from, $table_name, $prefix){
 
     if (!empty($connect_to) &&  !empty($connect_from) && $table_name != ""){
 
+
         try {
             $db_from = new PDO($connect_from['DSN'], $connect_from['LOGIN'], $connect_from['PASS']);
             $db_to = new PDO($connect_to['DSN'], $connect_to['LOGIN'], $connect_to['PASS']);
@@ -110,6 +116,7 @@ function editColumnsParam($connect_to, $connect_from, $table_name, $prefix){
 
             $mas_columns_from = $res_from->fetchAll();
             $mas_columns_to = $res_to->fetchAll();
+
 
             foreach ($mas_columns_to as $key => $columns_to) {
                 if ($columns_to['COLUMN_NAME'] != $mas_columns_from[$key]['COLUMN_NAME']){
@@ -199,11 +206,12 @@ function getDefaultAndCollate($data){
         $data['DATA_TYPE'] == 'longtext' ||
         $data['DATA_TYPE'] == 'longtext' ||
         $data['DATA_TYPE'] == 'longtext' ||
+        $data['DATA_TYPE'] == 'tinyint' ||
         $data['DATA_TYPE'] == 'int') $wordData = "'" . $data['COLUMN_DEFAULT'] . "'";
 
     if ($data['COLLATION_NAME'] != "") $coll.= ' COLLATE ' . $data['COLLATION_NAME'];
-    if ($data['COLUMN_DEFAULT'] != "") $coll.= ' DEFAULT ' . $wordData; else $coll.= ' DEFAULT';
     if ($data['IS_NULLABLE'] == 'YES') $coll.= ' NULL'; else $coll.= ' NOT NULL';
+    if ($data['COLUMN_DEFAULT'] != "") $coll.= ' DEFAULT ' . $wordData;
 
     return $coll;
 }
