@@ -28,11 +28,11 @@ function createTableForImport($tables = array(), $prefix = 'import_', $connect_f
 
                 if ($mas_res['LINE_COUNT']){
 
-                    $dbh->exec('USE bitrix24prod;');
+                    $dbh->exec('USE ' . $connect_from['DB_NAME'] . ';');
 
                     //создаем эти копии если все проверки успешны
                     $DROPAllOldTable = "DROP TABLE IF EXISTS " . $prefix . $table . ";";
-                    $createNewTable = "CREATE TABLE bitrix24prod." . $prefix . $table . " SELECT * FROM bitrix24prod." . $table . ";";
+                    $createNewTable = "CREATE TABLE " . $connect_from['DB_NAME'] . "." . $prefix . $table . " SELECT * FROM " . $connect_from['DB_NAME'] . "." . $table . ";";
 
                     $dbh->exec($DROPAllOldTable);
                     $dbh->exec($createNewTable);
