@@ -1,5 +1,5 @@
 <?php
-require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix_perenos/functions.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix_perenos/scripts/functions.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/bitrix_perenos/connect.php';
 
 $mas_tables = array(

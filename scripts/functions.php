@@ -128,11 +128,11 @@ function editColumnsParam($connect_to, $connect_from, $table_name, $prefix){
                     $column_before = $mas_columns_to[$key - 1]['COLUMN_NAME'];
 
                     if (!getTrueColumns($columns_to['COLUMN_NAME'], $mas_columns_from)){
-                        $result_edit.= "ALTER TABLE " . $prefix . $table_name . " ADD " . $columns_to['COLUMN_NAME'] . getDefaultAndCollate($result) . " AFTER " .  $column_before . ";";
+                        $result_edit.= "ALTER TABLE " . $prefix . $table_name . " ADD " . $columns_to['COLUMN_NAME'] . " " . $result['COLUMN_TYPE'] . " AFTER " .  $column_before . ";";
                     }
 
                     if (getTrueColumns($columns_to['COLUMN_NAME'], $mas_columns_from)){
-                        $result_edit.= "ALTER TABLE " . $prefix . $table_name . " MODIFY " . $columns_to['COLUMN_NAME'] . getDefaultAndCollate($result) . " AFTER " . $column_before . ";";
+                        $result_edit.= "ALTER TABLE " . $prefix . $table_name . " MODIFY " . $columns_to['COLUMN_NAME'] . " " . $result['COLUMN_TYPE'] . " AFTER " . $column_before . ";";
                     }
                 }
             }
@@ -184,36 +184,6 @@ function addToFileStart($path_to_file, $mode, $string){
         fwrite($file_add_end, $string);
         fclose($file_add_end);
     }
-}
-
-// функция для правильного определния дефолтногот поля
-/**
- * @param $data
- * @return string
- */
-function getDefaultAndCollate($data){
-    $coll = '';
-    $wordData = '';
-
-    $coll = " " . $data['COLUMN_TYPE'];
-
-    if ($data['DATA_TYPE'] == 'varchar' ||
-        $data['DATA_TYPE'] == 'text' ||
-        $data['DATA_TYPE'] == 'mediumtext' ||
-        $data['DATA_TYPE'] == 'char' ||
-        $data['DATA_TYPE'] == 'mediumtext' ||
-        $data['DATA_TYPE'] == 'longtext' ||
-        $data['DATA_TYPE'] == 'longtext' ||
-        $data['DATA_TYPE'] == 'longtext' ||
-        $data['DATA_TYPE'] == 'longtext' ||
-        $data['DATA_TYPE'] == 'tinyint' ||
-        $data['DATA_TYPE'] == 'int') $wordData = "'" . $data['COLUMN_DEFAULT'] . "'";
-
-    if ($data['COLLATION_NAME'] != "") $coll.= ' COLLATE ' . $data['COLLATION_NAME'];
-    if ($data['IS_NULLABLE'] == 'YES') $coll.= ' NULL'; else $coll.= ' NOT NULL';
-    if ($data['COLUMN_DEFAULT'] != "") $coll.= ' DEFAULT ' . $wordData;
-
-    return $coll;
 }
 
 /**
