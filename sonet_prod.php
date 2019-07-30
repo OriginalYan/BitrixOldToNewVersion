@@ -7,6 +7,7 @@ $mas_tables = array(
     'b_sonet_group',
     'b_sonet_group_favorites',
     'b_sonet_group_site',
+    'b_sonet_user2group',
     'b_sonet_group_subject',
     'b_sonet_group_subject_site',
     'b_sonet_group_view',
